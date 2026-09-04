@@ -45,6 +45,8 @@ npm run test:e2e
 
 GitHub Actions runs format, lint, types, unit tests, build, and the Chromium smoke test for pull requests and `main`. Dependabot creates one grouped update pull request per week.
 
+Every commit runs a fast, staged-file-only check through Husky and lint-staged: JavaScript and TypeScript files receive ESLint fixes followed by Prettier, while CSS, JSON, Markdown, and YAML files are formatted with Prettier. Full-project checks remain in CI, so commits stay fast.
+
 The production build explicitly uses Webpack. Next.js 16 defaults to Turbopack, but this opt-out keeps builds reliable in restricted local environments; revisit it when the project no longer needs that compatibility path. The build also disables Next's experimental TypeScript CLI checker because this boilerplate pins TypeScript 5.9, whose JavaScript compiler API is the compatible checker for the current Next version.
 
 The default security headers include a static CSP and HSTS. The CSP keeps static rendering and CDN caching intact, but integrations such as analytics, a CMS, remote fonts, or a form provider must add their exact trusted origins to the relevant directive in `next.config.ts`. Do not introduce CSP nonces unless a project needs their extra XSS protection: nonces require per-request dynamic rendering and add operational complexity.
