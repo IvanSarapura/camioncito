@@ -9,7 +9,7 @@
     "start": "next start",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -46,7 +46,7 @@
   },
   "lint-staged": {
     "*.{js,jsx,mjs,ts,tsx,mts}": [
-      "eslint --fix",
+      "eslint --fix --max-warnings 0",
       "prettier --write"
     ],
     "*.{css,json,md,yml,yaml}": "prettier --write"
