@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BuenosAiresRouteMap } from "./buenos-aires-route-map";
 
 type ContainerStatus = "ok" | "lleno" | "saturado";
+const suggestionDuration = 10_000;
 
 const statusOptions: Array<{
   id: ContainerStatus;
@@ -95,7 +96,10 @@ export function OperationsDashboard() {
   );
   const [routeChangeVisible, setRouteChangeVisible] = useState(false);
   const [routeChanged, setRouteChanged] = useState(false);
+  const [suggestionAvailable, setSuggestionAvailable] = useState(true);
   const [advanceToken, setAdvanceToken] = useState(0);
+  const [rewindToken, setRewindToken] = useState(0);
+  const [rewindStopIndex, setRewindStopIndex] = useState<number | null>(null);
   const [activeStop, setActiveStop] = useState<number | null>(0);
   const activeStopRef = useRef<number | null>(0);
   const selectedStatus = statusOptions.find((option) => option.id === status);
@@ -120,10 +124,26 @@ export function OperationsDashboard() {
   }, []);
 
   function undoReport() {
+    const stopToRestore = reportedStopIndex;
     setStatus(null);
     setReportedStopIndex(null);
     setUndoVisible(false);
+    if (stopToRestore !== null) {
+      activeStopRef.current = stopToRestore;
+      setActiveStop(stopToRestore);
+      setRewindStopIndex(stopToRestore);
+      setRewindToken((token) => token + 1);
+    }
   }
+
+  useEffect(() => {
+    if (routeChanged || !suggestionAvailable) return;
+    const timeout = window.setTimeout(() => {
+      setRouteChangeVisible(false);
+      setSuggestionAvailable(false);
+    }, suggestionDuration);
+    return () => window.clearTimeout(timeout);
+  }, [routeChanged, suggestionAvailable]);
 
   return (
     <div className="driver-app">
@@ -135,7 +155,7 @@ export function OperationsDashboard() {
           <span className="brand-mark" aria-hidden="true">
             <Icon name="truck" size={22} />
           </span>
-          <span>camioncito</span>
+          <span>Rumbo</span>
         </div>
         <div className="route-chip">
           <span className="live-dot" aria-hidden="true" /> Recorrido activo
@@ -146,14 +166,53 @@ export function OperationsDashboard() {
         <h1 className="visually-hidden">Recorrido de recolección</h1>
 
         <section className="next-stop" aria-label="Próxima parada">
-          <span className="direction-icon" aria-hidden="true">
-            <Icon name="arrow" size={24} />
-          </span>
-          <div>
-            <strong>Próxima parada</strong>
-            <p>120 m · Calle Moreno 840</p>
+          <div className="next-stop-main">
+            <span className="direction-icon" aria-hidden="true">
+              <Icon name="arrow" size={24} />
+            </span>
+            <div>
+              <strong>Próxima parada</strong>
+              <p>120 m · Calle Moreno 840</p>
+            </div>
+            <span className="eta">1 min</span>
           </div>
-          <span className="eta">1 min</span>
+          {!routeChanged && suggestionAvailable ? (
+            <div className="route-suggestion">
+              <button
+                className="suggestion-trigger"
+                type="button"
+                onClick={() => setRouteChangeVisible((visible) => !visible)}
+                aria-expanded={routeChangeVisible}
+                aria-controls="route-change-details"
+              >
+                <span className="suggestion-icon" aria-hidden="true">
+                  <Icon name="spark" size={18} />
+                </span>
+                <span className="suggestion-copy">
+                  <strong>Sugerencia de ruta</strong>
+                  <small>Evitá Av. Sarmiento</small>
+                </span>
+                <span className="suggestion-control">
+                  {routeChangeVisible ? "Ocultar" : "Ver"}
+                </span>
+              </button>
+              <div
+                id="route-change-details"
+                className="route-change"
+                hidden={!routeChangeVisible}
+              >
+                <p>Obra vial a 300 m. El desvío suma 2 min.</p>
+                <button type="button" onClick={() => setRouteChanged(true)}>
+                  <Icon name="route" size={18} /> Aplicar desvío
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="route-applied" role="status">
+              <Icon name="check" size={19} />
+              <span>Desvío aplicado. Seguí las indicaciones del mapa.</span>
+            </div>
+          )}
         </section>
 
         <section className="map-card" aria-labelledby="map-title">
@@ -166,6 +225,8 @@ export function OperationsDashboard() {
             routeChanged={routeChanged}
             onStopChange={handleStopChange}
             advanceToken={advanceToken}
+            rewindToken={rewindToken}
+            rewindStopIndex={rewindStopIndex}
           />
           <p className="map-caption">
             Montserrat · Ruta y puntos de recolección
@@ -221,46 +282,6 @@ export function OperationsDashboard() {
             ))}
           </div>
         </section>
-
-        {!routeChanged && (
-          <section
-            className="route-suggestion"
-            aria-labelledby="suggestion-title"
-          >
-            <span className="suggestion-icon" aria-hidden="true">
-              <Icon name="spark" />
-            </span>
-            <div>
-              <p>Recomendación de ruta</p>
-              <h2 id="suggestion-title">Evitá Av. Sarmiento</h2>
-              <span>Obra vial a 300 m de tu recorrido.</span>
-            </div>
-            <button
-              className="suggestion-action"
-              type="button"
-              onClick={() => setRouteChangeVisible((visible) => !visible)}
-              aria-expanded={routeChangeVisible}
-              aria-controls="route-change-details"
-            >
-              {routeChangeVisible ? "Ocultar" : "Ver alternativa"}
-            </button>
-            {routeChangeVisible && (
-              <div id="route-change-details" className="route-change">
-                <p>El desvío suma 2 min y mantiene las próximas 6 paradas.</p>
-                <button type="button" onClick={() => setRouteChanged(true)}>
-                  <Icon name="route" size={18} /> Aplicar desvío
-                </button>
-              </div>
-            )}
-          </section>
-        )}
-
-        {routeChanged && (
-          <section className="route-applied" role="status">
-            <Icon name="check" size={19} />
-            <span>Desvío aplicado. Seguí las indicaciones del mapa.</span>
-          </section>
-        )}
       </main>
 
       {selectedStatus && undoVisible && (

@@ -18,6 +18,8 @@ test("lets the driver report and undo a container status", () => {
   expect(
     screen.queryByText("Estado reportado: Saturado"),
   ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^ok$/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /^lleno$/i })).toBeEnabled();
 });
 
 test("moves on after the five-second stop and clears the previous report", () => {
@@ -38,10 +40,22 @@ test("moves on after the five-second stop and clears the previous report", () =>
 test("shows and applies a suggested route change", () => {
   render(<OperationsDashboard />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Ver alternativa" }));
+  fireEvent.click(screen.getByRole("button", { name: /ver/i }));
   fireEvent.click(screen.getByRole("button", { name: /aplicar desvío/i }));
 
   expect(screen.getByRole("status")).toHaveTextContent("Desvío aplicado");
+});
+
+test("hides an unused route suggestion after ten seconds", () => {
+  vi.useFakeTimers();
+  render(<OperationsDashboard />);
+
+  act(() => vi.advanceTimersByTime(10_000));
+
+  expect(
+    screen.queryByRole("button", { name: /^ver$/i }),
+  ).not.toBeInTheDocument();
+  vi.useRealTimers();
 });
 
 test("lets the driver adjust the simulated map zoom", () => {

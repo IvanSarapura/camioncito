@@ -1,4 +1,4 @@
-# Camioncito
+# Rumbo
 
 MVP de trazabilidad para camiones de recolección urbana. Incluye un tablero operativo con flota, recorridos, incidencias y sugerencias de ruta de demostración.
 

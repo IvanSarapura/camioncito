@@ -15,6 +15,8 @@ type Props = {
   routeChanged: boolean;
   onStopChange?: (stopIndex: number | null) => void;
   advanceToken?: number;
+  rewindToken?: number;
+  rewindStopIndex?: number | null;
 };
 type MapPoint = { x: number; y: number };
 
@@ -235,6 +237,8 @@ export function BuenosAiresRouteMap({
   routeChanged,
   onStopChange,
   advanceToken = 0,
+  rewindToken = 0,
+  rewindStopIndex = null,
 }: Props) {
   const [zoomIndex, setZoomIndex] = useState(2);
   const route = routeChanged ? detourRoute : regularRoute;
@@ -249,6 +253,7 @@ export function BuenosAiresRouteMap({
   const displayedAngleRef = useRef(-90);
   const lastWheelRef = useRef(0);
   const advanceRequestedRef = useRef(false);
+  const rewindStopIndexRef = useRef<number | null>(null);
   const zoom = zoomLevels[zoomIndex] ?? 1;
 
   const updateViewport = useCallback(
@@ -317,7 +322,21 @@ export function BuenosAiresRouteMap({
       }
       return { phase, elapsed: remaining };
     };
+    const elapsedAtStop = (stopIndex: number) => {
+      let elapsed = 0;
+      for (const phase of phases) {
+        if (phase.stopIndex === stopIndex) return elapsed;
+        elapsed += phase.duration;
+      }
+      return 0;
+    };
     const animate = (now: number) => {
+      if (rewindStopIndexRef.current !== null) {
+        const targetElapsed = elapsedAtStop(rewindStopIndexRef.current) + 1;
+        timeOffset = targetElapsed - (now - startedAt);
+        advanceRequestedRef.current = false;
+        rewindStopIndexRef.current = null;
+      }
       let resolved = resolvePhase(
         Math.min(now - startedAt + timeOffset, duration - 1),
       );
@@ -347,6 +366,12 @@ export function BuenosAiresRouteMap({
   useEffect(() => {
     if (advanceToken > 0) advanceRequestedRef.current = true;
   }, [advanceToken]);
+
+  useEffect(() => {
+    if (rewindToken > 0 && rewindStopIndex !== null) {
+      rewindStopIndexRef.current = rewindStopIndex;
+    }
+  }, [rewindStopIndex, rewindToken]);
 
   useEffect(() => {
     const point = pointBetween(

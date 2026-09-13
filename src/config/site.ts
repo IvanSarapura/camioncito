@@ -5,12 +5,12 @@ const siteUrl = configuredSiteUrl
   : localSiteUrl;
 
 export const siteConfig = {
-  name: "Camioncito",
+  name: "Rumbo",
   description:
     "Trazabilidad operativa y sugerencias de recorrido para la recolección urbana.",
   url: siteUrl,
   locale: "es-AR",
-  email: "operaciones@camioncito.ar",
+  email: "operaciones@rumbo.ar",
   navigation: [
     { href: "#operacion", label: "Operación" },
     { href: "#flota", label: "Flota" },
