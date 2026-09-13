@@ -55,6 +55,7 @@ test("hides an unused route suggestion after ten seconds", () => {
   expect(
     screen.queryByRole("button", { name: /^ver$/i }),
   ).not.toBeInTheDocument();
+  expect(screen.queryByText(/desvío aplicado/i)).not.toBeInTheDocument();
   vi.useRealTimers();
 });
 

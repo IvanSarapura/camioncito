@@ -207,12 +207,12 @@ export function OperationsDashboard() {
                 </button>
               </div>
             </div>
-          ) : (
+          ) : routeChanged ? (
             <div className="route-applied" role="status">
               <Icon name="check" size={19} />
               <span>Desvío aplicado. Seguí las indicaciones del mapa.</span>
             </div>
-          )}
+          ) : null}
         </section>
 
         <section className="map-card" aria-labelledby="map-title">
