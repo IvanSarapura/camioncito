@@ -205,6 +205,23 @@ button {
   border-radius: 1rem;
   background: var(--surface);
 }
+.map-caption {
+  margin: 0;
+  border-block-start: 1px solid #e3ebe7;
+  padding: 0.65rem 0.85rem 0.7rem;
+  background: #fbfdfc;
+  color: #60756d;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  line-height: 1.2;
+}
 .simulated-map {
   position: relative;
   aspect-ratio: 1 / 1;

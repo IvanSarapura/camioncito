@@ -177,9 +177,39 @@ export function OperationsDashboard() {
             recenterToken={recenterToken}
           />
           <p className="map-caption">
-            Simulación operativa · Centro / Monserrat · Ruta y puntos de
-            recolección
+            Montserrat · Ruta y puntos de recolección
           </p>
+        </section>
+
+        <section
+          className="container-status"
+          aria-labelledby="container-status-title"
+        >
+          <div className="status-heading">
+            <div>
+              <p>Estás en Calle Moreno 840</p>
+              <h2 id="container-status-title">¿Cómo está el contenedor?</h2>
+            </div>
+            <span>Detené el vehículo antes de reportar</span>
+          </div>
+          <div
+            className="status-actions"
+            role="group"
+            aria-label="Estado del contenedor"
+          >
+            {statusOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`status-button ${option.id}${status === option.id ? " selected" : ""}`}
+                onClick={() => reportStatus(option.id)}
+                aria-pressed={status === option.id}
+              >
+                <Icon name={option.icon} size={23} />
+                <strong>{option.label}</strong>
+              </button>
+            ))}
+          </div>
         </section>
 
         {!routeChanged && (
@@ -221,37 +251,6 @@ export function OperationsDashboard() {
             <span>Desvío aplicado. Seguí las indicaciones del mapa.</span>
           </section>
         )}
-
-        <section
-          className="container-status"
-          aria-labelledby="container-status-title"
-        >
-          <div className="status-heading">
-            <div>
-              <p>Estás en Calle Moreno 840</p>
-              <h2 id="container-status-title">¿Cómo está el contenedor?</h2>
-            </div>
-            <span>Detené el vehículo antes de reportar</span>
-          </div>
-          <div
-            className="status-actions"
-            role="group"
-            aria-label="Estado del contenedor"
-          >
-            {statusOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={`status-button ${option.id}${status === option.id ? " selected" : ""}`}
-                onClick={() => reportStatus(option.id)}
-                aria-pressed={status === option.id}
-              >
-                <Icon name={option.icon} size={23} />
-                <strong>{option.label}</strong>
-              </button>
-            ))}
-          </div>
-        </section>
       </main>
 
       {selectedStatus && undoVisible && (
