@@ -178,23 +178,29 @@ export function OperationsDashboard() {
         >
           <div className="status-heading">
             <div>
-              <p>
+              <p className="status-stop">
                 {activeStop === null
-                  ? "En tránsito hacia la próxima parada"
-                  : `Punto ${stopSequence[activeStop]} de 8 · Calle Moreno 840`}
+                  ? "Próxima parada"
+                  : `Punto ${stopSequence[activeStop]} de 8`}
               </p>
               <h2 id="container-status-title">
                 {activeStop === null
-                  ? "Esperá la detención del camión"
+                  ? "En camino al próximo punto"
                   : "¿Cómo está el contenedor?"}
               </h2>
             </div>
-            <span>
-              {activeStop === null
-                ? "Los botones se habilitan al llegar"
-                : "Detenido · 5 segundos para informar"}
+            <span
+              className={`status-state ${activeStop === null ? "moving" : "ready"}`}
+            >
+              <span aria-hidden="true" />
+              {activeStop === null ? "En camino" : "5 s para informar"}
             </span>
           </div>
+          <p className="status-location">
+            {activeStop === null
+              ? "El estado se habilita al llegar."
+              : "Calle Moreno 840"}
+          </p>
           <div
             className="status-actions"
             role="group"
