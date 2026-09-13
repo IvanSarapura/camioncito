@@ -24,3 +24,14 @@ test("shows and applies a suggested route change", () => {
 
   expect(screen.getByRole("status")).toHaveTextContent("Desvío aplicado");
 });
+
+test("lets the driver adjust the simulated map zoom", () => {
+  render(<OperationsDashboard />);
+
+  const zoomIn = screen.getByRole("button", { name: "Acercar mapa" });
+  const zoomOut = screen.getByRole("button", { name: "Alejar mapa" });
+
+  expect(zoomOut).toBeDisabled();
+  fireEvent.click(zoomIn);
+  expect(zoomOut).toBeEnabled();
+});

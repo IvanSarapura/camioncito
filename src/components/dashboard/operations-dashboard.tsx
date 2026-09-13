@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BuenosAiresRouteMap } from "./buenos-aires-route-map";
 
 type ContainerStatus = "ok" | "lleno" | "saturado";
 
@@ -96,6 +97,7 @@ export function OperationsDashboard() {
   const [status, setStatus] = useState<ContainerStatus | null>(null);
   const [routeChangeVisible, setRouteChangeVisible] = useState(false);
   const [routeChanged, setRouteChanged] = useState(false);
+  const [recenterToken, setRecenterToken] = useState(0);
   const selectedStatus = statusOptions.find((option) => option.id === status);
 
   function reportStatus(nextStatus: ContainerStatus) {
@@ -129,6 +131,7 @@ export function OperationsDashboard() {
             className="locate-button"
             type="button"
             aria-label="Centrar ubicación actual"
+            onClick={() => setRecenterToken((token) => token + 1)}
           >
             <Icon name="locate" />
           </button>
@@ -149,68 +152,15 @@ export function OperationsDashboard() {
           <h2 id="map-title" className="visually-hidden">
             Mapa del recorrido actual
           </h2>
-          <div
-            className="driver-map"
-            role="img"
-            aria-label="Mapa con el recorrido activo desde Calle Moreno hacia Avenida Sarmiento"
-          >
-            <svg
-              viewBox="0 0 600 600"
-              preserveAspectRatio="xMidYMid slice"
-              aria-hidden="true"
-            >
-              <rect width="600" height="600" fill="#dceae3" />
-              <path
-                d="M-30 455C88 360 122 485 225 390S326 322 410 275 510 300 640 165"
-                fill="none"
-                stroke="#a5bfce"
-                strokeWidth="42"
-              />
-              <path
-                d="M-30 455C88 360 122 485 225 390S326 322 410 275 510 300 640 165"
-                fill="none"
-                stroke="#edf6f8"
-                strokeWidth="22"
-              />
-              <g fill="none" stroke="#fafcfb" strokeWidth="14">
-                <path d="M-20 100 125 165 260 105 374 180 508 108 640 160" />
-                <path d="M-20 260 102 230 190 286 306 238 405 330 506 270 640 328" />
-                <path d="M105 -20 124 165 102 230 150 405 130 620" />
-                <path d="M310 -20 290 118 306 238 340 620" />
-                <path d="M510 -20 508 108 506 270 570 620" />
-              </g>
-              <path
-                d={
-                  routeChanged
-                    ? "M115 438C190 390 220 333 290 340S388 330 445 252 488 190 552 166"
-                    : "M115 438C170 410 196 390 225 390S320 322 410 275 510 300 552 166"
-                }
-                fill="none"
-                stroke="#19765f"
-                strokeWidth="11"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <g fill="#19765f">
-                <circle cx="225" cy="390" r="7" />
-                <circle cx="410" cy="275" r="7" />
-                <circle cx="552" cy="166" r="7" />
-              </g>
-            </svg>
-            <span className="map-place place-one">Barrio Centro</span>
-            <span className="map-place place-two">Plaza Sarmiento</span>
-            <span className="vehicle-pin" aria-hidden="true">
-              <Icon name="truck" size={19} />
-            </span>
-            <div className="map-key">
-              <span>
-                <i /> Ruta activa
-              </span>
-              <span>
-                <b /> Próxima parada
-              </span>
-            </div>
-          </div>
+          <BuenosAiresRouteMap
+            containerStatus={status}
+            routeChanged={routeChanged}
+            recenterToken={recenterToken}
+          />
+          <p className="map-caption">
+            Simulación operativa · Centro / Monserrat · Ruta y puntos de
+            recolección
+          </p>
         </section>
 
         {!routeChanged && (
