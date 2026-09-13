@@ -9,17 +9,73 @@ import {
 } from "react";
 
 type ContainerStatus = "ok" | "lleno" | "saturado" | null;
-
 type Props = {
   containerStatus: ContainerStatus;
   routeChanged: boolean;
   recenterToken: number;
 };
-
 type MapPoint = { x: number; y: number };
 
 const mapSize = { width: 360, height: 420 };
 const zoomLevels = [1, 1.35, 1.75];
+const columns = [
+  [18, 64],
+  [77, 120],
+  [135, 183],
+  [197, 246],
+  [261, 305],
+] as const;
+const rows = [
+  [34, 79],
+  [95, 144],
+  [159, 209],
+  [223, 273],
+  [287, 337],
+  [351, 393],
+] as const;
+const parks = new Set(["2-0", "3-4"]);
+const cityBlocks = rows.flatMap(([y, bottom], row) =>
+  columns.map(([x, right], column) => ({
+    x,
+    y,
+    width: right - x,
+    height: bottom - y,
+    isPark: parks.has(`${row}-${column}`),
+    key: `${row}-${column}`,
+  })),
+);
+const buildingMasses = cityBlocks
+  .filter((block) => !block.isPark)
+  .flatMap((block, index) => {
+    const inset = 7 + (index % 3);
+    const split = index % 4 === 0;
+    if (!split) {
+      return [
+        {
+          x: block.x + inset,
+          y: block.y + inset,
+          width: Math.max(8, block.width - inset * 2),
+          height: Math.max(8, block.height - inset * 2),
+        },
+      ];
+    }
+    const gap = 4;
+    const width = Math.max(7, (block.width - inset * 2 - gap) / 2);
+    return [
+      {
+        x: block.x + inset,
+        y: block.y + inset,
+        width,
+        height: block.height - inset * 2,
+      },
+      {
+        x: block.x + inset + width + gap,
+        y: block.y + inset,
+        width,
+        height: block.height - inset * 2,
+      },
+    ];
+  });
 const regularRoute: MapPoint[] = [
   { x: 140, y: 344 },
   { x: 140, y: 282 },
@@ -38,19 +94,27 @@ const detourRoute: MapPoint[] = [
 ];
 
 function pointOnRoute(route: MapPoint[], progress: number) {
-  const segment = Math.min(
-    Math.floor(progress * (route.length - 1)),
-    route.length - 2,
-  );
-  const segmentProgress = progress * (route.length - 1) - segment;
-  const start = route[segment] ?? { x: 0, y: 0 };
-  const end = route[segment + 1] ?? start;
-
-  return {
-    x: start.x + (end.x - start.x) * segmentProgress,
-    y: start.y + (end.y - start.y) * segmentProgress,
-    angle: Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI),
-  };
+  const lengths = route.slice(1).map((point, index) => {
+    const start = route[index] ?? point;
+    return Math.hypot(point.x - start.x, point.y - start.y);
+  });
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  let distance = total * progress;
+  for (let index = 0; index < lengths.length; index += 1) {
+    const length = lengths[index] ?? 1;
+    const start = route[index] ?? { x: 0, y: 0 };
+    const end = route[index + 1] ?? start;
+    if (distance <= length || index === lengths.length - 1) {
+      const ratio = Math.min(1, distance / length);
+      return {
+        x: start.x + (end.x - start.x) * ratio,
+        y: start.y + (end.y - start.y) * ratio,
+        angle: Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI),
+      };
+    }
+    distance -= length;
+  }
+  return { x: 0, y: 0, angle: 0 };
 }
 
 function viewBoxFor(point: MapPoint, zoom: number) {
@@ -61,8 +125,14 @@ function viewBoxFor(point: MapPoint, zoom: number) {
     0,
     Math.min(point.y - height / 2, mapSize.height - height),
   );
-
   return `${x} ${y} ${width} ${height}`;
+}
+
+function normalizeAngle(angle: number) {
+  const normalized = angle % 360;
+  if (normalized > 180) return normalized - 360;
+  if (normalized < -180) return normalized + 360;
+  return normalized;
 }
 
 function statusColor(status: ContainerStatus) {
@@ -79,8 +149,10 @@ export function BuenosAiresRouteMap({
 }: Props) {
   const [zoomIndex, setZoomIndex] = useState(0);
   const svgRef = useRef<SVGSVGElement>(null);
-  const vehicleRef = useRef<SVGGElement>(null);
+  const vehiclePositionRef = useRef<SVGGElement>(null);
+  const vehicleRotationRef = useRef<SVGGElement>(null);
   const progressRef = useRef(0.14);
+  const displayedAngleRef = useRef(-90);
   const lastWheelRef = useRef(0);
   const route = routeChanged ? detourRoute : regularRoute;
   const zoom = zoomLevels[zoomIndex] ?? 1;
@@ -92,12 +164,21 @@ export function BuenosAiresRouteMap({
     [zoom],
   );
 
-  function updateVehicle(point: ReturnType<typeof pointOnRoute>) {
-    vehicleRef.current?.setAttribute(
-      "transform",
-      `translate(${point.x} ${point.y}) rotate(${point.angle})`,
-    );
-  }
+  const updateVehicle = useCallback(
+    (point: ReturnType<typeof pointOnRoute>) => {
+      const delta = normalizeAngle(point.angle - displayedAngleRef.current);
+      displayedAngleRef.current += delta * 0.18;
+      vehiclePositionRef.current?.setAttribute(
+        "transform",
+        `translate(${point.x} ${point.y})`,
+      );
+      vehicleRotationRef.current?.setAttribute(
+        "transform",
+        `rotate(${displayedAngleRef.current})`,
+      );
+    },
+    [],
+  );
 
   function adjustZoom(direction: 1 | -1) {
     setZoomIndex((current) => {
@@ -105,9 +186,8 @@ export function BuenosAiresRouteMap({
         0,
         Math.min(zoomLevels.length - 1, current + direction),
       );
-      const currentRoute = routeChanged ? detourRoute : regularRoute;
       updateViewport(
-        pointOnRoute(currentRoute, progressRef.current),
+        pointOnRoute(route, progressRef.current),
         zoomLevels[next] ?? 1,
       );
       return next;
@@ -117,22 +197,16 @@ export function BuenosAiresRouteMap({
   function handleWheel(event: WheelEvent<HTMLDivElement>) {
     const now = performance.now();
     if (now - lastWheelRef.current < 160) return;
-
     event.preventDefault();
     lastWheelRef.current = now;
     adjustZoom(event.deltaY < 0 ? 1 : -1);
   }
 
   useEffect(() => {
-    const motionPreference = window.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    );
-    if (motionPreference?.matches || !window.requestAnimationFrame) return;
-
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     let frame = 0;
     const startedAt = performance.now();
     const duration = 13_500;
-
     const animate = (now: number) => {
       const progress = ((now - startedAt) % duration) / duration;
       progressRef.current = progress;
@@ -141,27 +215,25 @@ export function BuenosAiresRouteMap({
       if (zoom > 1) updateViewport(point);
       frame = window.requestAnimationFrame(animate);
     };
-
     frame = window.requestAnimationFrame(animate);
     return () => window.cancelAnimationFrame(frame);
-  }, [route, updateViewport, zoom]);
+  }, [route, updateVehicle, updateViewport, zoom]);
 
   useEffect(() => {
     const point = pointOnRoute(route, progressRef.current);
     updateVehicle(point);
     updateViewport(point);
-  }, [route, routeChanged, updateViewport, zoomIndex]);
+  }, [route, routeChanged, updateVehicle, updateViewport, zoomIndex]);
 
   useEffect(() => {
-    if (recenterToken === 0) return;
-    const point = pointOnRoute(route, progressRef.current);
-    updateViewport(point);
+    if (recenterToken > 0)
+      updateViewport(pointOnRoute(route, progressRef.current));
   }, [recenterToken, route, updateViewport]);
 
-  const startingPoint = pointOnRoute(route, 0.14);
   const routePath = routeChanged
     ? "M140 344H71V218h134v-66h72"
     : "M140 344V282h65v-64h72v-66";
+  const startingPoint = pointOnRoute(route, 0.14);
 
   return (
     <div
@@ -170,29 +242,43 @@ export function BuenosAiresRouteMap({
       aria-describedby="simulated-map-description"
     >
       <p id="simulated-map-description" className="visually-hidden">
-        Mapa operativo simulado de Centro y Monserrat. Usá los controles para
-        acercar o alejar y el botón de ubicación para centrar el camión.
+        Mapa operativo simulado de Centro y Monserrat. Muestra la ruta, los
+        puntos de recolección y la posición del camión.
       </p>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${mapSize.width} ${mapSize.height}`}
         aria-hidden="true"
       >
-        <rect width="360" height="420" fill="#d9e7e0" />
+        <rect className="sim-map-land" width="360" height="420" />
         <g className="sim-map-blocks">
-          <path d="M18 34h46v45H18zM77 34h43v45H77zM135 34h48v45h-48zM197 34h49v45h-49zM261 34h44v45h-44z" />
-          <path d="M18 95h46v49H18zM77 95h43v49H77zM135 95h48v49h-48zM197 95h49v49h-49zM261 95h44v49h-44z" />
-          <path d="M18 159h46v50H18zM77 159h43v50H77zM135 159h48v50h-48zM197 159h49v50h-49zM261 159h44v50h-44z" />
-          <path d="M18 223h46v50H18zM77 223h43v50H77zM135 223h48v50h-48zM197 223h49v50h-49zM261 223h44v50h-44z" />
-          <path d="M18 287h46v50H18zM77 287h43v50H77zM135 287h48v50h-48zM197 287h49v50h-49zM261 287h44v50h-44z" />
-          <path d="M18 351h46v42H18zM77 351h43v42H77zM135 351h48v42h-48zM197 351h49v42h-49zM261 351h44v42h-44z" />
+          {cityBlocks.map((block) => (
+            <rect
+              key={block.key}
+              className={block.isPark ? "sim-map-park" : "sim-map-block"}
+              x={block.x}
+              y={block.y}
+              width={block.width}
+              height={block.height}
+            />
+          ))}
         </g>
-        <path className="sim-map-avenue" d="M190 8v404" />
-        <g className="sim-map-streets">
+        <g className="sim-map-buildings">
+          {buildingMasses.map((building, index) => (
+            <rect key={index} {...building} rx="2" />
+          ))}
+        </g>
+        <g className="sim-map-road-edges">
           <path d="M8 83h344M8 150h344M8 215h344M8 280h344M8 345h344" />
           <path d="M71 10v400M127 10v400M190 10v400M253 10v400M312 10v400" />
         </g>
-        <path className="sim-map-plaza" d="M20 161h44v48H20z" />
+        <g className="sim-map-roads">
+          <path d="M8 83h344M8 150h344M8 215h344M8 280h344M8 345h344" />
+          <path d="M71 10v400M127 10v400M190 10v400M253 10v400M312 10v400" />
+        </g>
+        <path className="sim-map-avenue-edge" d="M190 8v404" />
+        <path className="sim-map-avenue" d="M190 8v404" />
+        <path className="sim-map-avenue-center" d="M190 8v404" />
         <g className="sim-map-labels">
           <text x="78" y="72">
             Defensa
@@ -209,10 +295,15 @@ export function BuenosAiresRouteMap({
           <text x="87" y="335">
             Chacabuco
           </text>
-          <text x="185" y="358" transform="rotate(-90 185 358)">
+          <text
+            className="sim-map-avenue-label"
+            x="185"
+            y="358"
+            transform="rotate(-90 185 358)"
+          >
             Av. Belgrano
           </text>
-          <text x="25" y="190">
+          <text className="sim-map-park-label" x="24" y="187">
             Plaza
           </text>
         </g>
@@ -220,6 +311,10 @@ export function BuenosAiresRouteMap({
         <path className="sim-map-completed" d="M71 394V344h69" />
         <path className="sim-map-route-casing" d={routePath} />
         <path className="sim-map-route" d={routePath} />
+        <g className="sim-map-route-markers">
+          <circle cx="71" cy="394" r="8" className="sim-map-route-start" />
+          <circle cx="277" cy="152" r="8" className="sim-map-route-end" />
+        </g>
         {[
           { x: 205, y: 282 },
           { x: 205, y: 218 },
@@ -245,13 +340,18 @@ export function BuenosAiresRouteMap({
           </g>
         ))}
         <g
-          ref={vehicleRef}
+          ref={vehiclePositionRef}
           className="sim-map-vehicle"
-          transform={`translate(${startingPoint.x} ${startingPoint.y}) rotate(${startingPoint.angle})`}
+          transform={`translate(${startingPoint.x} ${startingPoint.y})`}
         >
-          <circle className="sim-map-vehicle-halo" r="18" />
-          <circle className="sim-map-vehicle-core" r="13" />
-          <path d="M-7-5h11v9H-7zM4-2h5l3 3v3H4zM-4 6a2 2 0 1 0 0 .1M8 6a2 2 0 1 0 0 .1" />
+          <g
+            ref={vehicleRotationRef}
+            transform={`rotate(${startingPoint.angle})`}
+          >
+            <circle className="sim-map-vehicle-halo" r="18" />
+            <circle className="sim-map-vehicle-core" r="13" />
+            <path d="M-7-5h11v9H-7zM4-2h5l3 3v3H4zM-4 6a2 2 0 1 0 0 .1M8 6a2 2 0 1 0 0 .1" />
+          </g>
         </g>
       </svg>
       <div className="map-simulation-badge" aria-hidden="true">

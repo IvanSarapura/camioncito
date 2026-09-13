@@ -189,7 +189,7 @@ button {
   position: relative;
   aspect-ratio: 1 / 1;
   min-block-size: 21rem;
-  background: #dceae3;
+  background: #e8eef0;
   touch-action: pan-y;
 }
 .simulated-map > svg {
@@ -197,35 +197,71 @@ button {
   inline-size: 100%;
   block-size: 100%;
 }
-.sim-map-blocks path {
-  fill: #c5d4cb;
-  stroke: #afc1b7;
-  stroke-width: 1.2;
+.sim-map-land {
+  fill: #e8eef0;
 }
-.sim-map-blocks path:nth-child(even) {
-  fill: #cbd9d1;
+.sim-map-block {
+  fill: #dfe7e8;
+  stroke: #d6e0e2;
+  stroke-width: 1;
 }
-.sim-map-streets path {
+.sim-map-blocks rect:nth-child(even) {
+  fill: #e5ebec;
+}
+.sim-map-park {
+  fill: #d7ead9;
+  stroke: #c4ddc8;
+  stroke-width: 1;
+}
+.sim-map-buildings rect {
+  fill: #d0dbe0;
+  opacity: 0.76;
+}
+.sim-map-road-edges path {
   fill: none;
-  stroke: #f9fbfa;
-  stroke-width: 12;
+  stroke: #d4dde1;
+  stroke-width: 17;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+.sim-map-roads path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 11;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+.sim-map-avenue-edge {
+  fill: none;
+  stroke: #cbd6db;
+  stroke-width: 27;
+  stroke-linecap: butt;
 }
 .sim-map-avenue {
   fill: none;
-  stroke: #edf3f0;
-  stroke-width: 22;
+  stroke: #fff;
+  stroke-width: 20;
+  stroke-linecap: butt;
 }
-.sim-map-plaza {
-  fill: #b9d6c0;
-  stroke: #9bc6a9;
-  stroke-width: 1.3;
+.sim-map-avenue-center {
+  fill: none;
+  stroke: #dde5e8;
+  stroke-dasharray: 5 7;
+  stroke-width: 1.5;
 }
 .sim-map-labels text {
-  fill: #526e65;
+  fill: #81909a;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+.sim-map-labels .sim-map-avenue-label {
+  fill: #74838d;
+  font-size: 7.5px;
+}
+.sim-map-labels .sim-map-park-label {
+  fill: #66926f;
 }
 .sim-map-completed-casing,
 .sim-map-route-casing {
@@ -247,13 +283,23 @@ button {
   stroke-linejoin: round;
 }
 .sim-map-completed {
-  stroke: #8ebcaf;
+  stroke: #40a67d;
   stroke-width: 7;
 }
 .sim-map-route {
   stroke: var(--route);
-  stroke-dasharray: 2 3;
   stroke-width: 8;
+}
+.sim-map-route-start,
+.sim-map-route-end {
+  fill: #fff;
+  stroke-width: 3;
+}
+.sim-map-route-start {
+  stroke: var(--route);
+}
+.sim-map-route-end {
+  stroke: var(--red);
 }
 .sim-map-stop-halo {
   fill: #fff;
