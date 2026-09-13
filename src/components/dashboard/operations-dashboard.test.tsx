@@ -31,6 +31,9 @@ test("lets the driver adjust the simulated map zoom", () => {
   const zoomIn = screen.getByRole("button", { name: "Acercar mapa" });
   const zoomOut = screen.getByRole("button", { name: "Alejar mapa" });
 
+  expect(zoomOut).toBeEnabled();
+  fireEvent.click(zoomOut);
+  fireEvent.click(zoomOut);
   expect(zoomOut).toBeDisabled();
   fireEvent.click(zoomIn);
   expect(zoomOut).toBeEnabled();

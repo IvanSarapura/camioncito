@@ -198,28 +198,27 @@ button {
   block-size: 100%;
 }
 .sim-map-land {
-  fill: #e8eef0;
+  fill: #f8fafb;
 }
 .sim-map-block {
-  fill: #dfe7e8;
-  stroke: #d6e0e2;
+  fill: #e4eaec;
+  stroke: #cdd8dc;
   stroke-width: 1;
 }
-.sim-map-blocks rect:nth-child(even) {
-  fill: #e5ebec;
+.sim-map-blocks .sim-map-block:nth-child(even) {
+  fill: #eaf0f1;
 }
 .sim-map-park {
-  fill: #d7ead9;
-  stroke: #c4ddc8;
-  stroke-width: 1;
+  fill: #d5ead6;
+  stroke: #b6d7ba;
+  stroke-width: 1.5;
 }
 .sim-map-buildings rect {
-  fill: #d0dbe0;
-  opacity: 0.76;
+  fill: #cad6db;
 }
 .sim-map-road-edges path {
   fill: none;
-  stroke: #d4dde1;
+  stroke: #cdd8dd;
   stroke-width: 17;
   stroke-linecap: butt;
   stroke-linejoin: miter;
@@ -250,7 +249,7 @@ button {
   stroke-width: 1.5;
 }
 .sim-map-labels text {
-  fill: #81909a;
+  fill: #697984;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 7px;
   font-weight: 700;

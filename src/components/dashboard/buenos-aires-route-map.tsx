@@ -16,33 +16,44 @@ type Props = {
 };
 type MapPoint = { x: number; y: number };
 
-const mapSize = { width: 360, height: 420 };
-const zoomLevels = [1, 1.35, 1.75];
-const columns = [
-  [18, 64],
-  [77, 120],
-  [135, 183],
-  [197, 246],
-  [261, 305],
-] as const;
-const rows = [
-  [34, 79],
-  [95, 144],
-  [159, 209],
-  [223, 273],
-  [287, 337],
-  [351, 393],
-] as const;
-const parks = new Set(["2-0", "3-4"]);
-const cityBlocks = rows.flatMap(([y, bottom], row) =>
-  columns.map(([x, right], column) => ({
-    x,
-    y,
-    width: right - x,
-    height: bottom - y,
-    isPark: parks.has(`${row}-${column}`),
-    key: `${row}-${column}`,
-  })),
+const mapSize = { width: 800, height: 900 };
+const mapOrigin = { x: 220, y: 230 };
+const zoomLevels = [1, 1.35, 1.7, 2.1];
+const streetXs = [
+  32, 96, 160, 224, 291, 347, 410, 473, 532, 596, 660, 724, 768,
+];
+const streetYs = [
+  32, 96, 160, 224, 313, 380, 445, 510, 575, 640, 704, 768, 832,
+];
+const avenueXs = new Set([410]);
+const avenueYs = new Set([510]);
+const parks = new Set(["3-1", "5-0", "6-8", "9-4"]);
+const streetPaths = {
+  horizontal: streetYs.map((y) => `M0 ${y}H${mapSize.width}`).join(""),
+  vertical: streetXs.map((x) => `M${x} 0V${mapSize.height}`).join(""),
+  avenues: [
+    ...[...avenueXs].map((x) => `M${x} 0V${mapSize.height}`),
+    ...[...avenueYs].map((y) => `M0 ${y}H${mapSize.width}`),
+  ].join(""),
+};
+function roadInset(value: number, avenues: Set<number>) {
+  return avenues.has(value) ? 14 : 8;
+}
+const cityBlocks = streetYs.slice(0, -1).flatMap((top, row) =>
+  streetXs.slice(0, -1).map((left, column) => {
+    const right = streetXs[column + 1] ?? left;
+    const bottom = streetYs[row + 1] ?? top;
+    return {
+      x: left + roadInset(left, avenueXs),
+      y: top + roadInset(top, avenueYs),
+      width:
+        right - roadInset(right, avenueXs) - (left + roadInset(left, avenueXs)),
+      height:
+        bottom - roadInset(bottom, avenueYs) - (top + roadInset(top, avenueYs)),
+      isPark: parks.has(`${row}-${column}`),
+      key: `${row}-${column}`,
+    };
+  }),
 );
 const buildingMasses = cityBlocks
   .filter((block) => !block.isPark)
@@ -77,20 +88,20 @@ const buildingMasses = cityBlocks
     ];
   });
 const regularRoute: MapPoint[] = [
-  { x: 140, y: 344 },
-  { x: 140, y: 282 },
-  { x: 205, y: 282 },
-  { x: 205, y: 218 },
-  { x: 277, y: 218 },
-  { x: 277, y: 152 },
+  { x: 127, y: 345 },
+  { x: 127, y: 280 },
+  { x: 190, y: 280 },
+  { x: 190, y: 215 },
+  { x: 253, y: 215 },
+  { x: 253, y: 150 },
 ];
 const detourRoute: MapPoint[] = [
-  { x: 140, y: 344 },
+  { x: 127, y: 345 },
   { x: 71, y: 344 },
-  { x: 71, y: 218 },
-  { x: 205, y: 218 },
-  { x: 205, y: 152 },
-  { x: 277, y: 152 },
+  { x: 71, y: 215 },
+  { x: 190, y: 215 },
+  { x: 190, y: 150 },
+  { x: 253, y: 150 },
 ];
 
 function pointOnRoute(route: MapPoint[], progress: number) {
@@ -120,10 +131,13 @@ function pointOnRoute(route: MapPoint[], progress: number) {
 function viewBoxFor(point: MapPoint, zoom: number) {
   const width = mapSize.width / zoom;
   const height = mapSize.height / zoom;
-  const x = Math.max(0, Math.min(point.x - width / 2, mapSize.width - width));
+  const x = Math.max(
+    0,
+    Math.min(mapOrigin.x + point.x - width / 2, mapSize.width - width),
+  );
   const y = Math.max(
     0,
-    Math.min(point.y - height / 2, mapSize.height - height),
+    Math.min(mapOrigin.y + point.y - height / 2, mapSize.height - height),
   );
   return `${x} ${y} ${width} ${height}`;
 }
@@ -147,7 +161,7 @@ export function BuenosAiresRouteMap({
   routeChanged,
   recenterToken,
 }: Props) {
-  const [zoomIndex, setZoomIndex] = useState(0);
+  const [zoomIndex, setZoomIndex] = useState(2);
   const svgRef = useRef<SVGSVGElement>(null);
   const vehiclePositionRef = useRef<SVGGElement>(null);
   const vehicleRotationRef = useRef<SVGGElement>(null);
@@ -231,8 +245,8 @@ export function BuenosAiresRouteMap({
   }, [recenterToken, route, updateViewport]);
 
   const routePath = routeChanged
-    ? "M140 344H71V218h134v-66h72"
-    : "M140 344V282h65v-64h72v-66";
+    ? "M127 345H71V215h119v-65h63"
+    : "M127 345V280h63v-65h63v-65";
   const startingPoint = pointOnRoute(route, 0.14);
 
   return (
@@ -247,10 +261,15 @@ export function BuenosAiresRouteMap({
       </p>
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${mapSize.width} ${mapSize.height}`}
+        viewBox={viewBoxFor(startingPoint, zoom)}
         aria-hidden="true"
+        shapeRendering="geometricPrecision"
       >
-        <rect className="sim-map-land" width="360" height="420" />
+        <rect
+          className="sim-map-land"
+          width={mapSize.width}
+          height={mapSize.height}
+        />
         <g className="sim-map-blocks">
           {cityBlocks.map((block) => (
             <rect
@@ -268,89 +287,91 @@ export function BuenosAiresRouteMap({
             <rect key={index} {...building} rx="2" />
           ))}
         </g>
-        <g className="sim-map-road-edges">
-          <path d="M8 83h344M8 150h344M8 215h344M8 280h344M8 345h344" />
-          <path d="M71 10v400M127 10v400M190 10v400M253 10v400M312 10v400" />
+        <g className="sim-map-road-edges" shapeRendering="crispEdges">
+          <path d={streetPaths.horizontal} />
+          <path d={streetPaths.vertical} />
         </g>
-        <g className="sim-map-roads">
-          <path d="M8 83h344M8 150h344M8 215h344M8 280h344M8 345h344" />
-          <path d="M71 10v400M127 10v400M190 10v400M253 10v400M312 10v400" />
+        <g className="sim-map-roads" shapeRendering="crispEdges">
+          <path d={streetPaths.horizontal} />
+          <path d={streetPaths.vertical} />
         </g>
-        <path className="sim-map-avenue-edge" d="M190 8v404" />
-        <path className="sim-map-avenue" d="M190 8v404" />
-        <path className="sim-map-avenue-center" d="M190 8v404" />
-        <g className="sim-map-labels">
-          <text x="78" y="72">
-            Defensa
-          </text>
-          <text x="196" y="139">
-            Perú
-          </text>
-          <text x="82" y="205">
-            Bolívar
-          </text>
-          <text x="194" y="269">
-            Moreno
-          </text>
-          <text x="87" y="335">
-            Chacabuco
-          </text>
-          <text
-            className="sim-map-avenue-label"
-            x="185"
-            y="358"
-            transform="rotate(-90 185 358)"
-          >
-            Av. Belgrano
-          </text>
-          <text className="sim-map-park-label" x="24" y="187">
-            Plaza
-          </text>
-        </g>
-        <path className="sim-map-completed-casing" d="M71 394V344h69" />
-        <path className="sim-map-completed" d="M71 394V344h69" />
-        <path className="sim-map-route-casing" d={routePath} />
-        <path className="sim-map-route" d={routePath} />
-        <g className="sim-map-route-markers">
-          <circle cx="71" cy="394" r="8" className="sim-map-route-start" />
-          <circle cx="277" cy="152" r="8" className="sim-map-route-end" />
-        </g>
-        {[
-          { x: 205, y: 282 },
-          { x: 205, y: 218 },
-          { x: 277, y: 218 },
-          { x: 277, y: 152 },
-        ].map((point, index) => (
-          <g key={`${point.x}-${point.y}`}>
-            <circle
-              className="sim-map-stop-halo"
-              cx={point.x}
-              cy={point.y}
-              r="12"
-            />
-            <circle
-              cx={point.x}
-              cy={point.y}
-              r="7"
-              fill={index === 0 ? statusColor(containerStatus) : "#19765f"}
-            />
-            <text className="sim-map-stop-number" x={point.x} y={point.y + 3}>
-              {index + 1}
+        <path className="sim-map-avenue-edge" d={streetPaths.avenues} />
+        <path className="sim-map-avenue" d={streetPaths.avenues} />
+        <path className="sim-map-avenue-center" d={streetPaths.avenues} />
+        <g transform={`translate(${mapOrigin.x} ${mapOrigin.y})`}>
+          <g className="sim-map-labels">
+            <text x="78" y="72">
+              Defensa
+            </text>
+            <text x="196" y="139">
+              Perú
+            </text>
+            <text x="82" y="205">
+              Bolívar
+            </text>
+            <text x="194" y="269">
+              Moreno
+            </text>
+            <text x="87" y="335">
+              Chacabuco
+            </text>
+            <text
+              className="sim-map-avenue-label"
+              x="185"
+              y="358"
+              transform="rotate(-90 185 358)"
+            >
+              Av. Belgrano
+            </text>
+            <text className="sim-map-park-label" x="24" y="187">
+              Plaza
             </text>
           </g>
-        ))}
-        <g
-          ref={vehiclePositionRef}
-          className="sim-map-vehicle"
-          transform={`translate(${startingPoint.x} ${startingPoint.y})`}
-        >
+          <path className="sim-map-completed-casing" d="M71 410V345h56" />
+          <path className="sim-map-completed" d="M71 410V345h56" />
+          <path className="sim-map-route-casing" d={routePath} />
+          <path className="sim-map-route" d={routePath} />
+          <g className="sim-map-route-markers">
+            <circle cx="71" cy="410" r="8" className="sim-map-route-start" />
+            <circle cx="253" cy="150" r="8" className="sim-map-route-end" />
+          </g>
+          {[
+            { x: 190, y: 280 },
+            { x: 190, y: 215 },
+            { x: 253, y: 215 },
+            { x: 253, y: 150 },
+          ].map((point, index) => (
+            <g key={`${point.x}-${point.y}`}>
+              <circle
+                className="sim-map-stop-halo"
+                cx={point.x}
+                cy={point.y}
+                r="12"
+              />
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="7"
+                fill={index === 0 ? statusColor(containerStatus) : "#19765f"}
+              />
+              <text className="sim-map-stop-number" x={point.x} y={point.y + 3}>
+                {index + 1}
+              </text>
+            </g>
+          ))}
           <g
-            ref={vehicleRotationRef}
-            transform={`rotate(${startingPoint.angle})`}
+            ref={vehiclePositionRef}
+            className="sim-map-vehicle"
+            transform={`translate(${startingPoint.x} ${startingPoint.y})`}
           >
-            <circle className="sim-map-vehicle-halo" r="18" />
-            <circle className="sim-map-vehicle-core" r="13" />
-            <path d="M-7-5h11v9H-7zM4-2h5l3 3v3H4zM-4 6a2 2 0 1 0 0 .1M8 6a2 2 0 1 0 0 .1" />
+            <g
+              ref={vehicleRotationRef}
+              transform={`rotate(${startingPoint.angle})`}
+            >
+              <circle className="sim-map-vehicle-halo" r="18" />
+              <circle className="sim-map-vehicle-core" r="13" />
+              <path d="M-7-5h11v9H-7zM4-2h5l3 3v3H4zM-4 6a2 2 0 1 0 0 .1M8 6a2 2 0 1 0 0 .1" />
+            </g>
           </g>
         </g>
       </svg>
