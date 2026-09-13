@@ -14,6 +14,8 @@
   --red: #b83e3e;
   --red-bg: #fce7e4;
   --focus: #075f52;
+  --shadow-card: 0 8px 24px rgba(19, 49, 43, 0.08);
+  --shadow-lift: 0 12px 28px rgba(19, 49, 43, 0.13);
   color-scheme: light;
 }
 * {
@@ -64,16 +66,19 @@ button {
 }
 .driver-app {
   min-block-size: 100dvh;
-  background: var(--canvas);
+  background:
+    radial-gradient(circle at 90% -5%, #d7eee4 0, transparent 28rem),
+    var(--canvas);
 }
 .driver-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-block-size: 4.25rem;
-  padding: calc(0.7rem + env(safe-area-inset-top)) 1rem 0.7rem;
+  min-block-size: 4.5rem;
+  padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
   background: var(--forest);
   color: #fff;
+  box-shadow: 0 2px 0 rgba(71, 215, 166, 0.35);
 }
 .brand-lockup {
   display: flex;
@@ -96,10 +101,11 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 999px;
   padding: 0.35rem 0.55rem;
-  color: #e0efea;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e7f5ef;
   font-size: 0.71rem;
   font-weight: 700;
 }
@@ -111,8 +117,8 @@ button {
 }
 .route-main {
   display: grid;
-  gap: 0.8rem;
-  padding: 1rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+  gap: 1rem;
+  padding: 1.1rem 1rem calc(1.75rem + env(safe-area-inset-bottom));
 }
 .route-summary {
   display: flex;
@@ -124,7 +130,9 @@ button {
 .status-heading p {
   margin: 0 0 0.12rem;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
   font-weight: 700;
 }
 .route-summary h1 {
@@ -139,10 +147,21 @@ button {
   min-inline-size: 2.75rem;
   min-block-size: 2.75rem;
   border: 1px solid var(--line);
-  border-radius: 0.75rem;
+  border-radius: 0.85rem;
   background: var(--surface);
   color: var(--forest);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.locate-button:hover {
+  box-shadow: var(--shadow-lift);
+}
+.locate-button:active {
+  box-shadow: none;
+  transform: translateY(1px);
 }
 .next-stop {
   display: grid;
@@ -150,9 +169,10 @@ button {
   align-items: center;
   gap: 0.65rem;
   border: 1px solid var(--line);
-  border-radius: 0.85rem;
-  padding: 0.8rem;
+  border-radius: 1rem;
+  padding: 0.9rem;
   background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 .direction-icon {
   display: grid;
@@ -164,7 +184,7 @@ button {
   color: var(--route);
 }
 .next-stop strong {
-  font-size: 0.82rem;
+  font-size: 0.88rem;
 }
 .next-stop p {
   margin: 0.1rem 0 0;
@@ -174,7 +194,7 @@ button {
 .eta {
   border-radius: 999px;
   padding: 0.25rem 0.45rem;
-  background: #eef3f0;
+  background: #ddf2e8;
   color: #47615a;
   font-size: 0.72rem;
   font-weight: 800;
@@ -388,9 +408,10 @@ button {
   align-items: start;
   gap: 0.65rem;
   border: 1px solid #efd29f;
-  border-radius: 0.9rem;
-  padding: 0.85rem;
-  background: var(--amber-bg);
+  border-radius: 1rem;
+  padding: 0.95rem;
+  background: linear-gradient(135deg, #fff7e9, var(--amber-bg));
+  box-shadow: 0 7px 18px rgba(121, 79, 20, 0.07);
 }
 .suggestion-icon {
   display: grid;
@@ -404,7 +425,9 @@ button {
 .route-suggestion p {
   margin: 0;
   color: #886035;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
   font-weight: 700;
 }
 .route-suggestion h2 {
@@ -417,15 +440,22 @@ button {
   font-size: 0.74rem;
 }
 .suggestion-action {
-  min-block-size: 2.5rem;
-  border: 0;
+  min-block-size: 2.75rem;
+  border: 1px solid #d8a65a;
   border-radius: 0.55rem;
   padding: 0.4rem 0.55rem;
-  background: #fff9ed;
+  background: #fff;
   color: #774604;
   font-size: 0.74rem;
   font-weight: 800;
   cursor: pointer;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+.suggestion-action:hover {
+  background: #fffaf1;
+  box-shadow: 0 4px 12px rgba(121, 79, 20, 0.1);
 }
 .route-change {
   grid-column: 1/-1;
@@ -455,14 +485,15 @@ button {
   font-size: 0.76rem;
   font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 4px 10px rgba(121, 79, 20, 0.18);
 }
 .route-applied {
   display: flex;
   align-items: center;
   gap: 0.55rem;
   border: 1px solid #bfe6d5;
-  border-radius: 0.8rem;
-  padding: 0.75rem 0.85rem;
+  border-radius: 0.9rem;
+  padding: 0.85rem 0.9rem;
   background: #e8f8f0;
   color: #266750;
   font-size: 0.8rem;
@@ -473,6 +504,7 @@ button {
   border-radius: 1rem;
   padding: 1rem;
   background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 .status-heading {
   display: flex;
@@ -488,8 +520,8 @@ button {
 }
 .status-heading > span {
   max-inline-size: 11rem;
-  color: #76857f;
-  font-size: 0.65rem;
+  color: #5c7068;
+  font-size: 0.66rem;
   line-height: 1.25;
   text-align: end;
 }
@@ -505,11 +537,24 @@ button {
   align-content: center;
   gap: 0.15rem;
   border: 1px solid var(--line);
-  border-radius: 0.8rem;
+  border-radius: 0.9rem;
   background: #fff;
   color: var(--ink);
-  padding: 0.45rem 0.25rem;
+  padding: 0.6rem 0.25rem;
   cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.status-button:hover {
+  border-color: #aec6bc;
+  box-shadow: 0 5px 14px rgba(19, 49, 43, 0.08);
+}
+.status-button:active {
+  box-shadow: none;
+  transform: translateY(1px);
 }
 .status-button strong {
   font-size: 0.82rem;
@@ -532,14 +577,17 @@ button {
 .status-button.selected.ok {
   border-color: #249271;
   background: #e2f7ed;
+  box-shadow: inset 0 0 0 1px #249271;
 }
 .status-button.selected.lleno {
   border-color: #c77a1d;
   background: #fff1dc;
+  box-shadow: inset 0 0 0 1px #c77a1d;
 }
 .status-button.selected.saturado {
   border-color: #bf4b4b;
   background: var(--red-bg);
+  box-shadow: inset 0 0 0 1px #bf4b4b;
 }
 .report-toast {
   position: fixed;
@@ -551,11 +599,12 @@ button {
   gap: 0.55rem;
   max-inline-size: 34rem;
   margin-inline: auto;
-  border-radius: 0.85rem;
-  padding: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1rem;
+  padding: 0.78rem;
   background: var(--forest);
   color: #fff;
-  box-shadow: 0 8px 28px rgba(12, 41, 36, 0.3);
+  box-shadow: 0 14px 34px rgba(12, 41, 36, 0.3);
 }
 .report-toast.ok {
   background: #14644d;
@@ -595,6 +644,23 @@ button {
   place-items: center;
   min-inline-size: 2.5rem;
   padding: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .route-suggestion,
+  .next-stop,
+  .container-status {
+    animation: panel-enter 260ms ease-out both;
+  }
+}
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .not-found {
   display: grid;

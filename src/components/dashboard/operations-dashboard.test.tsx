@@ -19,7 +19,7 @@ test("lets the driver report and undo a container status", () => {
 test("shows and applies a suggested route change", () => {
   render(<OperationsDashboard />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Ver cambio" }));
+  fireEvent.click(screen.getByRole("button", { name: "Ver alternativa" }));
   fireEvent.click(screen.getByRole("button", { name: /aplicar desvío/i }));
 
   expect(screen.getByRole("status")).toHaveTextContent("Desvío aplicado");

@@ -172,7 +172,7 @@ export function OperationsDashboard() {
               <Icon name="spark" />
             </span>
             <div>
-              <p>Hay un cambio recomendado</p>
+              <p>Recomendación de ruta</p>
               <h2 id="suggestion-title">Evitá Av. Sarmiento</h2>
               <span>Obra vial a 300 m de tu recorrido.</span>
             </div>
@@ -181,11 +181,12 @@ export function OperationsDashboard() {
               type="button"
               onClick={() => setRouteChangeVisible((visible) => !visible)}
               aria-expanded={routeChangeVisible}
+              aria-controls="route-change-details"
             >
-              {routeChangeVisible ? "Ocultar" : "Ver cambio"}
+              {routeChangeVisible ? "Ocultar" : "Ver alternativa"}
             </button>
             {routeChangeVisible && (
-              <div className="route-change">
+              <div id="route-change-details" className="route-change">
                 <p>El desvío suma 2 min y mantiene las próximas 6 paradas.</p>
                 <button type="button" onClick={() => setRouteChanged(true)}>
                   <Icon name="route" size={18} /> Aplicar desvío
@@ -243,6 +244,7 @@ export function OperationsDashboard() {
           <Icon name={selectedStatus.icon} size={20} />
           <span>
             <strong>Estado reportado: {selectedStatus.label}</strong>
+            <small>Podés corregirlo si fue un error.</small>
           </span>
           <button type="button" onClick={() => setStatus(null)}>
             Deshacer
