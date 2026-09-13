@@ -20,7 +20,7 @@ test("lets the driver report and undo a container status", () => {
   ).not.toBeInTheDocument();
 });
 
-test("keeps the reported state after the undo window expires", () => {
+test("moves on after the five-second stop and clears the previous report", () => {
   vi.useFakeTimers();
   render(<OperationsDashboard />);
 
@@ -30,7 +30,7 @@ test("keeps the reported state after the undo window expires", () => {
   expect(screen.queryByText("Estado reportado: Lleno")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: /^lleno$/i })).toHaveAttribute(
     "aria-pressed",
-    "true",
+    "false",
   );
   vi.useRealTimers();
 });

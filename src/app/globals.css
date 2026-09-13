@@ -120,13 +120,6 @@ button {
   gap: 1rem;
   padding: 1.1rem 1rem calc(1.75rem + env(safe-area-inset-bottom));
 }
-.route-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.route-summary p,
 .status-heading p {
   margin: 0 0 0.12rem;
   color: var(--muted);
@@ -134,34 +127,6 @@ button {
   letter-spacing: 0.035em;
   text-transform: uppercase;
   font-weight: 700;
-}
-.route-summary h1 {
-  margin: 0;
-  font-size: clamp(1.5rem, 7vw, 2rem);
-  letter-spacing: -0.05em;
-}
-.locate-button {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  min-inline-size: 2.75rem;
-  min-block-size: 2.75rem;
-  border: 1px solid var(--line);
-  border-radius: 0.85rem;
-  background: var(--surface);
-  color: var(--forest);
-  box-shadow: var(--shadow-card);
-  cursor: pointer;
-  transition:
-    box-shadow 160ms ease,
-    transform 160ms ease;
-}
-.locate-button:hover {
-  box-shadow: var(--shadow-lift);
-}
-.locate-button:active {
-  box-shadow: none;
-  transform: translateY(1px);
 }
 .next-stop {
   display: grid;
@@ -573,6 +538,15 @@ button {
   box-shadow: none;
   transform: translateY(1px);
 }
+.status-button:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.45);
+  opacity: 0.58;
+}
+.status-button:disabled:hover {
+  border-color: var(--line);
+  box-shadow: none;
+}
 .status-button strong {
   font-size: 0.82rem;
 }
@@ -683,13 +657,11 @@ button {
   stroke-dashoffset: 0;
   stroke-linecap: round;
   stroke-width: 2.5;
-  animation-name: undo-countdown;
-  animation-timing-function: linear;
-  animation-fill-mode: forwards;
+  animation: undo-pulse 1.3s ease-in-out infinite;
 }
-@keyframes undo-countdown {
-  to {
-    stroke-dashoffset: 100;
+@keyframes undo-pulse {
+  50% {
+    opacity: 0.45;
   }
 }
 .report-toast button:last-child {
@@ -748,7 +720,6 @@ button {
   text-decoration: none;
 }
 @media (pointer: coarse) {
-  .locate-button,
   .suggestion-action,
   .route-change button,
   .status-button,

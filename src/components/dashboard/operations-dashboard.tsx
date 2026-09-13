@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { BuenosAiresRouteMap } from "./buenos-aires-route-map";
 
 type ContainerStatus = "ok" | "lleno" | "saturado";
-const undoDuration = 8_000;
 
 const statusOptions: Array<{
   id: ContainerStatus;
@@ -23,6 +22,7 @@ const statusOptions: Array<{
     icon: "alert",
   },
 ];
+const stopSequence = [1, 2, 3, 4, 5, 6, 7, 8];
 
 function Icon({
   name,
@@ -34,7 +34,6 @@ function Icon({
     | "check"
     | "full"
     | "alert"
-    | "locate"
     | "spark"
     | "arrow"
     | "close";
@@ -79,12 +78,6 @@ function Icon({
         <path d="M12 9v4M12 17h.01" />
       </>
     ),
-    locate: (
-      <>
-        <circle cx="12" cy="12" r="4" />
-        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-      </>
-    ),
     spark: (
       <path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" />
     ),
@@ -97,31 +90,40 @@ function Icon({
 export function OperationsDashboard() {
   const [status, setStatus] = useState<ContainerStatus | null>(null);
   const [undoVisible, setUndoVisible] = useState(false);
-  const [undoCycle, setUndoCycle] = useState(0);
+  const [reportedStopIndex, setReportedStopIndex] = useState<number | null>(
+    null,
+  );
   const [routeChangeVisible, setRouteChangeVisible] = useState(false);
   const [routeChanged, setRouteChanged] = useState(false);
-  const [recenterToken, setRecenterToken] = useState(0);
+  const [advanceToken, setAdvanceToken] = useState(0);
+  const [activeStop, setActiveStop] = useState<number | null>(0);
+  const activeStopRef = useRef<number | null>(0);
   const selectedStatus = statusOptions.find((option) => option.id === status);
 
   function reportStatus(nextStatus: ContainerStatus) {
+    if (activeStop === null) return;
     setStatus(nextStatus);
-    setUndoCycle((cycle) => cycle + 1);
+    setReportedStopIndex(activeStop);
+    setAdvanceToken((token) => token + 1);
     setUndoVisible(true);
   }
 
+  const handleStopChange = useCallback((stopIndex: number | null) => {
+    if (activeStopRef.current === stopIndex) return;
+    activeStopRef.current = stopIndex;
+    setActiveStop(stopIndex);
+    if (stopIndex !== null) {
+      setStatus(null);
+      setReportedStopIndex(null);
+      setUndoVisible(false);
+    }
+  }, []);
+
   function undoReport() {
     setStatus(null);
+    setReportedStopIndex(null);
     setUndoVisible(false);
   }
-
-  useEffect(() => {
-    if (!undoVisible) return;
-    const timeout = window.setTimeout(
-      () => setUndoVisible(false),
-      undoDuration,
-    );
-    return () => window.clearTimeout(timeout);
-  }, [undoCycle, undoVisible]);
 
   return (
     <div className="driver-app">
@@ -141,20 +143,7 @@ export function OperationsDashboard() {
       </header>
 
       <main id="route-content" className="route-main" tabIndex={-1}>
-        <section className="route-summary" aria-labelledby="route-title">
-          <div>
-            <p>Tu recorrido</p>
-            <h1 id="route-title">Ruta Centro 02</h1>
-          </div>
-          <button
-            className="locate-button"
-            type="button"
-            aria-label="Centrar ubicación actual"
-            onClick={() => setRecenterToken((token) => token + 1)}
-          >
-            <Icon name="locate" />
-          </button>
-        </section>
+        <h1 className="visually-hidden">Recorrido de recolección</h1>
 
         <section className="next-stop" aria-label="Próxima parada">
           <span className="direction-icon" aria-hidden="true">
@@ -173,8 +162,10 @@ export function OperationsDashboard() {
           </h2>
           <BuenosAiresRouteMap
             containerStatus={status}
+            reportedStopIndex={reportedStopIndex}
             routeChanged={routeChanged}
-            recenterToken={recenterToken}
+            onStopChange={handleStopChange}
+            advanceToken={advanceToken}
           />
           <p className="map-caption">
             Montserrat · Ruta y puntos de recolección
@@ -187,10 +178,22 @@ export function OperationsDashboard() {
         >
           <div className="status-heading">
             <div>
-              <p>Estás en Calle Moreno 840</p>
-              <h2 id="container-status-title">¿Cómo está el contenedor?</h2>
+              <p>
+                {activeStop === null
+                  ? "En tránsito hacia la próxima parada"
+                  : `Punto ${stopSequence[activeStop]} de 8 · Calle Moreno 840`}
+              </p>
+              <h2 id="container-status-title">
+                {activeStop === null
+                  ? "Esperá la detención del camión"
+                  : "¿Cómo está el contenedor?"}
+              </h2>
             </div>
-            <span>Detené el vehículo antes de reportar</span>
+            <span>
+              {activeStop === null
+                ? "Los botones se habilitan al llegar"
+                : "Detenido · 5 segundos para informar"}
+            </span>
           </div>
           <div
             className="status-actions"
@@ -204,6 +207,7 @@ export function OperationsDashboard() {
                 className={`status-button ${option.id}${status === option.id ? " selected" : ""}`}
                 onClick={() => reportStatus(option.id)}
                 aria-pressed={status === option.id}
+                disabled={activeStop === null}
               >
                 <Icon name={option.icon} size={23} />
                 <strong>{option.label}</strong>
@@ -262,7 +266,7 @@ export function OperationsDashboard() {
           <Icon name={selectedStatus.icon} size={20} />
           <span>
             <strong>Estado reportado: {selectedStatus.label}</strong>
-            <small>Podés corregirlo durante 8 segundos.</small>
+            <small>Podés corregirlo hasta llegar a la próxima parada.</small>
           </span>
           <button
             className="undo-button"
@@ -277,7 +281,6 @@ export function OperationsDashboard() {
               aria-hidden="true"
             >
               <rect
-                key={undoCycle}
                 className="undo-timer-path"
                 x="1"
                 y="1"
@@ -285,7 +288,6 @@ export function OperationsDashboard() {
                 height="42"
                 rx="9"
                 pathLength="100"
-                style={{ animationDuration: `${undoDuration}ms` }}
               />
             </svg>
             <span>Deshacer</span>

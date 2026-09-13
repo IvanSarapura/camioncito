@@ -11,14 +11,19 @@ import {
 type ContainerStatus = "ok" | "lleno" | "saturado" | null;
 type Props = {
   containerStatus: ContainerStatus;
+  reportedStopIndex: number | null;
   routeChanged: boolean;
-  recenterToken: number;
+  onStopChange?: (stopIndex: number | null) => void;
+  advanceToken?: number;
 };
 type MapPoint = { x: number; y: number };
 
 const mapSize = { width: 800, height: 900 };
 const mapOrigin = { x: 220, y: 230 };
 const zoomLevels = [1, 1.35, 1.7, 2.1];
+const stopDwellDuration = 5_000;
+const blockTravelDuration = 750;
+const fallbackPoint: MapPoint = { x: 0, y: 0 };
 const streetXs = [
   32, 96, 160, 224, 291, 347, 410, 473, 532, 596, 660, 724, 768,
 ];
@@ -88,44 +93,112 @@ const buildingMasses = cityBlocks
     ];
   });
 const regularRoute: MapPoint[] = [
+  { x: 71, y: 410 },
+  { x: 71, y: 83 },
+  { x: 127, y: 83 },
+  { x: 127, y: 247 },
   { x: 127, y: 345 },
+  { x: 220, y: 345 },
+  { x: 253, y: 345 },
+  { x: 253, y: 182 },
+  { x: 253, y: 83 },
+  { x: 347, y: 83 },
+  { x: 410, y: 83 },
+  { x: 410, y: 215 },
+  { x: 410, y: 345 },
+  { x: 473, y: 345 },
+  { x: 532, y: 345 },
+  { x: 532, y: 215 },
+];
+const regularStopIndexes = [2, 3, 5, 7, 9, 11, 13, 15];
+const detourRoute: MapPoint[] = [
+  { x: 71, y: 410 },
+  { x: 71, y: 83 },
+  { x: 127, y: 83 },
+  { x: 127, y: 247 },
   { x: 127, y: 280 },
   { x: 190, y: 280 },
-  { x: 190, y: 215 },
-  { x: 253, y: 215 },
-  { x: 253, y: 150 },
+  { x: 190, y: 345 },
+  { x: 220, y: 345 },
+  { x: 253, y: 345 },
+  { x: 253, y: 182 },
+  { x: 253, y: 83 },
+  { x: 347, y: 83 },
+  { x: 410, y: 83 },
+  { x: 410, y: 215 },
+  { x: 410, y: 345 },
+  { x: 473, y: 345 },
+  { x: 532, y: 345 },
+  { x: 532, y: 215 },
 ];
-const detourRoute: MapPoint[] = [
-  { x: 127, y: 345 },
-  { x: 71, y: 344 },
-  { x: 71, y: 215 },
-  { x: 190, y: 215 },
-  { x: 190, y: 150 },
-  { x: 253, y: 150 },
-];
+const detourStopIndexes = [2, 3, 7, 9, 11, 13, 15, 17];
+const stopNumbers = [1, 2, 3, 4, 5, 6, 7, 8];
 
-function pointOnRoute(route: MapPoint[], progress: number) {
-  const lengths = route.slice(1).map((point, index) => {
-    const start = route[index] ?? point;
-    return Math.hypot(point.x - start.x, point.y - start.y);
-  });
-  const total = lengths.reduce((sum, length) => sum + length, 0);
-  let distance = total * progress;
-  for (let index = 0; index < lengths.length; index += 1) {
-    const length = lengths[index] ?? 1;
-    const start = route[index] ?? { x: 0, y: 0 };
-    const end = route[index + 1] ?? start;
-    if (distance <= length || index === lengths.length - 1) {
-      const ratio = Math.min(1, distance / length);
-      return {
-        x: start.x + (end.x - start.x) * ratio,
-        y: start.y + (end.y - start.y) * ratio,
-        angle: Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI),
-      };
+function pointBetween(start: MapPoint, end: MapPoint, progress: number) {
+  return {
+    x: start.x + (end.x - start.x) * progress,
+    y: start.y + (end.y - start.y) * progress,
+    angle: Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI),
+  };
+}
+
+function travelDuration(from: MapPoint, to: MapPoint) {
+  const blocks = Math.max(
+    1,
+    Math.round((Math.abs(to.x - from.x) + Math.abs(to.y - from.y)) / 64),
+  );
+  return blocks * blockTravelDuration;
+}
+
+function routePhases(route: MapPoint[], stopIndexes: number[]) {
+  const phases: Array<{
+    from: MapPoint;
+    to: MapPoint;
+    duration: number;
+    stopIndex: number | null;
+  }> = [];
+  stopIndexes.forEach((routeIndex, stopIndex) => {
+    const point = route[routeIndex] ?? route[route.length - 1] ?? fallbackPoint;
+    const previousStopIndex = stopIndexes[stopIndex - 1] ?? routeIndex;
+    if (stopIndex > 0) {
+      for (
+        let waypointIndex = previousStopIndex + 1;
+        waypointIndex <= routeIndex;
+        waypointIndex += 1
+      ) {
+        const from = route[waypointIndex - 1] ?? point;
+        const to = route[waypointIndex] ?? point;
+        phases.push({
+          from,
+          to,
+          duration: travelDuration(from, to),
+          stopIndex: null,
+        });
+      }
     }
-    distance -= length;
+    phases.push({
+      from: point,
+      to: point,
+      duration: stopDwellDuration,
+      stopIndex,
+    });
+  });
+  const lastStopIndex = stopIndexes[stopIndexes.length - 1] ?? 0;
+  for (
+    let waypointIndex = lastStopIndex + 1;
+    waypointIndex < route.length;
+    waypointIndex += 1
+  ) {
+    const from = route[waypointIndex - 1] ?? fallbackPoint;
+    const to = route[waypointIndex] ?? from;
+    phases.push({
+      from,
+      to,
+      duration: travelDuration(from, to),
+      stopIndex: null,
+    });
   }
-  return { x: 0, y: 0, angle: 0 };
+  return phases;
 }
 
 function viewBoxFor(point: MapPoint, zoom: number) {
@@ -158,17 +231,24 @@ function statusColor(status: ContainerStatus) {
 
 export function BuenosAiresRouteMap({
   containerStatus,
+  reportedStopIndex,
   routeChanged,
-  recenterToken,
+  onStopChange,
+  advanceToken = 0,
 }: Props) {
   const [zoomIndex, setZoomIndex] = useState(2);
+  const route = routeChanged ? detourRoute : regularRoute;
+  const stopIndexes = routeChanged ? detourStopIndexes : regularStopIndexes;
+  const firstStopIndex = stopIndexes[0] ?? 0;
   const svgRef = useRef<SVGSVGElement>(null);
   const vehiclePositionRef = useRef<SVGGElement>(null);
   const vehicleRotationRef = useRef<SVGGElement>(null);
-  const progressRef = useRef(0.14);
+  const currentPointRef = useRef<MapPoint>(
+    route[firstStopIndex] ?? route[0] ?? fallbackPoint,
+  );
   const displayedAngleRef = useRef(-90);
   const lastWheelRef = useRef(0);
-  const route = routeChanged ? detourRoute : regularRoute;
+  const advanceRequestedRef = useRef(false);
   const zoom = zoomLevels[zoomIndex] ?? 1;
 
   const updateViewport = useCallback(
@@ -179,7 +259,7 @@ export function BuenosAiresRouteMap({
   );
 
   const updateVehicle = useCallback(
-    (point: ReturnType<typeof pointOnRoute>) => {
+    (point: ReturnType<typeof pointBetween>) => {
       const delta = normalizeAngle(point.angle - displayedAngleRef.current);
       displayedAngleRef.current += delta * 0.18;
       vehiclePositionRef.current?.setAttribute(
@@ -200,10 +280,7 @@ export function BuenosAiresRouteMap({
         0,
         Math.min(zoomLevels.length - 1, current + direction),
       );
-      updateViewport(
-        pointOnRoute(route, progressRef.current),
-        zoomLevels[next] ?? 1,
-      );
+      updateViewport(currentPointRef.current, zoomLevels[next] ?? 1);
       return next;
     });
   }
@@ -220,34 +297,90 @@ export function BuenosAiresRouteMap({
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     let frame = 0;
     const startedAt = performance.now();
-    const duration = 13_500;
+    const phases = routePhases(route, stopIndexes);
+    const duration = phases.reduce((sum, phase) => sum + phase.duration, 0);
+    let timeOffset = 0;
+    const resolvePhase = (elapsed: number) => {
+      let remaining = elapsed;
+      let phase = phases[phases.length - 1] ?? {
+        from: fallbackPoint,
+        to: fallbackPoint,
+        duration: 1,
+        stopIndex: null,
+      };
+      for (const candidate of phases) {
+        if (remaining <= candidate.duration) {
+          phase = candidate;
+          break;
+        }
+        remaining -= candidate.duration;
+      }
+      return { phase, elapsed: remaining };
+    };
     const animate = (now: number) => {
-      const progress = ((now - startedAt) % duration) / duration;
-      progressRef.current = progress;
-      const point = pointOnRoute(route, progress);
+      let resolved = resolvePhase(
+        Math.min(now - startedAt + timeOffset, duration - 1),
+      );
+      if (advanceRequestedRef.current && resolved.phase.stopIndex !== null) {
+        timeOffset += resolved.phase.duration - resolved.elapsed;
+        advanceRequestedRef.current = false;
+        resolved = resolvePhase(
+          Math.min(now - startedAt + timeOffset, duration - 1),
+        );
+      }
+      const { phase, elapsed } = resolved;
+      const point = pointBetween(
+        phase.from,
+        phase.to,
+        Math.min(1, elapsed / phase.duration),
+      );
+      currentPointRef.current = point;
+      onStopChange?.(phase.stopIndex);
       updateVehicle(point);
       if (zoom > 1) updateViewport(point);
       frame = window.requestAnimationFrame(animate);
     };
     frame = window.requestAnimationFrame(animate);
     return () => window.cancelAnimationFrame(frame);
-  }, [route, updateVehicle, updateViewport, zoom]);
+  }, [onStopChange, route, stopIndexes, updateVehicle, updateViewport, zoom]);
 
   useEffect(() => {
-    const point = pointOnRoute(route, progressRef.current);
+    if (advanceToken > 0) advanceRequestedRef.current = true;
+  }, [advanceToken]);
+
+  useEffect(() => {
+    const point = pointBetween(
+      route[firstStopIndex - 1] ?? route[0] ?? fallbackPoint,
+      route[firstStopIndex] ?? route[0] ?? fallbackPoint,
+      1,
+    );
+    currentPointRef.current = point;
+    onStopChange?.(0);
     updateVehicle(point);
     updateViewport(point);
-  }, [route, routeChanged, updateVehicle, updateViewport, zoomIndex]);
-
-  useEffect(() => {
-    if (recenterToken > 0)
-      updateViewport(pointOnRoute(route, progressRef.current));
-  }, [recenterToken, route, updateViewport]);
+  }, [
+    firstStopIndex,
+    onStopChange,
+    route,
+    routeChanged,
+    updateVehicle,
+    updateViewport,
+    zoomIndex,
+  ]);
 
   const routePath = routeChanged
-    ? "M127 345H71V215h119v-65h63"
-    : "M127 345V280h63v-65h63v-65";
-  const startingPoint = pointOnRoute(route, 0.14);
+    ? "M127 83V280H190V345H220H253V83H347H410V345H473H532V215"
+    : "M127 83V345H220H253V83H347H410V345H473H532V215";
+  const startingPoint = pointBetween(
+    route[firstStopIndex - 1] ?? route[0] ?? fallbackPoint,
+    route[firstStopIndex] ?? route[0] ?? fallbackPoint,
+    1,
+  );
+  const routeStops = stopIndexes.map(
+    (routeIndex) =>
+      route[routeIndex] ?? route[route.length - 1] ?? fallbackPoint,
+  );
+  const routeEnd = route[route.length - 1] ?? fallbackPoint;
 
   return (
     <div
@@ -327,20 +460,20 @@ export function BuenosAiresRouteMap({
               Plaza
             </text>
           </g>
-          <path className="sim-map-completed-casing" d="M71 410V345h56" />
-          <path className="sim-map-completed" d="M71 410V345h56" />
+          <path className="sim-map-completed-casing" d="M71 410V83h56" />
+          <path className="sim-map-completed" d="M71 410V83h56" />
           <path className="sim-map-route-casing" d={routePath} />
           <path className="sim-map-route" d={routePath} />
           <g className="sim-map-route-markers">
             <circle cx="71" cy="410" r="8" className="sim-map-route-start" />
-            <circle cx="253" cy="150" r="8" className="sim-map-route-end" />
+            <circle
+              cx={routeEnd.x}
+              cy={routeEnd.y}
+              r="8"
+              className="sim-map-route-end"
+            />
           </g>
-          {[
-            { x: 190, y: 280 },
-            { x: 190, y: 215 },
-            { x: 253, y: 215 },
-            { x: 253, y: 150 },
-          ].map((point, index) => (
+          {routeStops.map((point, index) => (
             <g key={`${point.x}-${point.y}`}>
               <circle
                 className="sim-map-stop-halo"
@@ -352,10 +485,14 @@ export function BuenosAiresRouteMap({
                 cx={point.x}
                 cy={point.y}
                 r="7"
-                fill={index === 0 ? statusColor(containerStatus) : "#19765f"}
+                fill={
+                  index === reportedStopIndex
+                    ? statusColor(containerStatus)
+                    : "#19765f"
+                }
               />
               <text className="sim-map-stop-number" x={point.x} y={point.y + 3}>
-                {index + 1}
+                {stopNumbers[index]}
               </text>
             </g>
           ))}
