@@ -639,6 +639,42 @@ button {
   font-weight: 800;
   cursor: pointer;
 }
+.report-toast .undo-button {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.18);
+  isolation: isolate;
+}
+.undo-button > span {
+  position: relative;
+  z-index: 1;
+}
+.undo-timer {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.undo-timer-path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  stroke-linecap: round;
+  stroke-width: 2.5;
+  animation-name: undo-countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes undo-countdown {
+  to {
+    stroke-dashoffset: 100;
+  }
+}
 .report-toast button:last-child {
   display: grid;
   place-items: center;
@@ -744,5 +780,8 @@ button {
   .sim-map-vehicle-halo {
     animation: none;
     opacity: 0.45;
+  }
+  .undo-timer-path {
+    animation: none;
   }
 }

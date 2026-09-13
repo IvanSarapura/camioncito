@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BuenosAiresRouteMap } from "./buenos-aires-route-map";
 
 type ContainerStatus = "ok" | "lleno" | "saturado";
+const undoDuration = 8_000;
 
 const statusOptions: Array<{
   id: ContainerStatus;
@@ -95,6 +96,8 @@ function Icon({
 
 export function OperationsDashboard() {
   const [status, setStatus] = useState<ContainerStatus | null>(null);
+  const [undoVisible, setUndoVisible] = useState(false);
+  const [undoCycle, setUndoCycle] = useState(0);
   const [routeChangeVisible, setRouteChangeVisible] = useState(false);
   const [routeChanged, setRouteChanged] = useState(false);
   const [recenterToken, setRecenterToken] = useState(0);
@@ -102,7 +105,23 @@ export function OperationsDashboard() {
 
   function reportStatus(nextStatus: ContainerStatus) {
     setStatus(nextStatus);
+    setUndoCycle((cycle) => cycle + 1);
+    setUndoVisible(true);
   }
+
+  function undoReport() {
+    setStatus(null);
+    setUndoVisible(false);
+  }
+
+  useEffect(() => {
+    if (!undoVisible) return;
+    const timeout = window.setTimeout(
+      () => setUndoVisible(false),
+      undoDuration,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [undoCycle, undoVisible]);
 
   return (
     <div className="driver-app">
@@ -235,7 +254,7 @@ export function OperationsDashboard() {
         </section>
       </main>
 
-      {selectedStatus && (
+      {selectedStatus && undoVisible && (
         <div
           className={`report-toast ${selectedStatus.id}`}
           role="status"
@@ -244,14 +263,37 @@ export function OperationsDashboard() {
           <Icon name={selectedStatus.icon} size={20} />
           <span>
             <strong>Estado reportado: {selectedStatus.label}</strong>
-            <small>Podés corregirlo si fue un error.</small>
+            <small>Podés corregirlo durante 8 segundos.</small>
           </span>
-          <button type="button" onClick={() => setStatus(null)}>
-            Deshacer
+          <button
+            className="undo-button"
+            type="button"
+            onClick={undoReport}
+            aria-label={`Deshacer reporte de contenedor ${selectedStatus.label.toLowerCase()}`}
+          >
+            <svg
+              className="undo-timer"
+              viewBox="0 0 100 44"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <rect
+                key={undoCycle}
+                className="undo-timer-path"
+                x="1"
+                y="1"
+                width="98"
+                height="42"
+                rx="9"
+                pathLength="100"
+                style={{ animationDuration: `${undoDuration}ms` }}
+              />
+            </svg>
+            <span>Deshacer</span>
           </button>
           <button
             type="button"
-            onClick={() => setStatus(null)}
+            onClick={() => setUndoVisible(false)}
             aria-label="Cerrar confirmación"
           >
             <Icon name="close" size={18} />
