@@ -1,9 +1,8 @@
 {
-  "name": "my-provisional-frontend",
+  "name": "camioncito",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prepare": "husky",
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
@@ -11,12 +10,10 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test": "vitest run"
   },
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=20.9"
   },
   "dependencies": {
     "next": "16.3.4",
@@ -24,7 +21,6 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -36,19 +32,10 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
-    "husky": "9.1.7",
     "jsdom": "^29.1.1",
-    "lint-staged": "17.0.2",
     "prettier": "^3.8.3",
     "tailwindcss": "^4",
     "typescript": "5.9.3",
     "vitest": "^4.1.6"
-  },
-  "lint-staged": {
-    "*.{js,jsx,mjs,ts,tsx,mts}": [
-      "eslint --fix --max-warnings 0",
-      "prettier --write"
-    ],
-    "*.{css,json,md,yml,yaml}": "prettier --write"
   }
 }

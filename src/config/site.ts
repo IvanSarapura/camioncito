@@ -5,14 +5,14 @@ const siteUrl = configuredSiteUrl
   : localSiteUrl;
 
 export const siteConfig = {
-  name: "Your Studio",
+  name: "Camioncito",
   description:
-    "A concise description of the work your website helps people accomplish.",
+    "Trazabilidad operativa y sugerencias de recorrido para la recolección urbana.",
   url: siteUrl,
-  locale: "en",
-  email: "hello@example.com",
+  locale: "es-AR",
+  email: "operaciones@camioncito.ar",
   navigation: [
-    { href: "#features", label: "Features" },
-    { href: "#contact", label: "Contact" },
+    { href: "#operacion", label: "Operación" },
+    { href: "#flota", label: "Flota" },
   ],
 } as const;

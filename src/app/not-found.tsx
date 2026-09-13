@@ -1,15 +1,14 @@
 import Link from "next/link";
-import { Container } from "@/components/layout/container";
 
 export default function NotFound() {
   return (
-    <Container className="section">
-      <p className="eyebrow">404</p>
-      <h1 className="section-heading">This page does not exist.</h1>
-      <p className="hero-copy">Check the address or return to the homepage.</p>
-      <Link className="button button-primary" href="/">
-        Go home
+    <main className="not-found">
+      <p className="kicker">Error 404</p>
+      <h1>Esta pantalla no existe.</h1>
+      <p>Revisá la dirección o volvé al centro de operaciones.</p>
+      <Link className="primary-button" href="/">
+        Volver a operación
       </Link>
-    </Container>
+    </main>
   );
 }

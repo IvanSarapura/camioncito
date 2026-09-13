@@ -1,5 +1,0 @@
-import type { ComponentProps } from "react";
-
-export function Container({ className = "", ...props }: ComponentProps<"div">) {
-  return <div className={`container ${className}`.trim()} {...props} />;
-}
